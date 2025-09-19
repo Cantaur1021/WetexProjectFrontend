@@ -18,73 +18,62 @@
       --ring:rgba(47,109,178,.25);
     }
     *{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
-    body{width:1080px;height:1080px;overflow:hidden;background:#fff;position:relative;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;cursor:none; background: var(--page-bg);
-}
+    body{
+      width:1080px;height:1080px;overflow:hidden;
+      position:relative;cursor:none;
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+      background:var(--page-bg);
+    }
 
     /* Background video fills stage; bias the crop upward with object-position */
     .bg-video{
-      position:absolute; inset:0; 
+      position:absolute; inset:0;
       width:1080px; height:1080px;
       object-fit:cover;
-      /* center horizontally, shift vertically via CSS var */
       object-position:center calc(50% + var(--video-bias));
-      z-index:0;
-      pointer-events:none;
-      background: var(--page-bg);
+      z-index:0; pointer-events:none;
+      background:var(--page-bg);
     }
 
     .ui-overlay{
-      position:absolute; inset:0;
+      position:absolute; inset:0; z-index:10;
       pointer-events:none;
       display:flex; flex-direction:column; align-items:center; justify-content:center;
-      z-index:10;
     }
 
     /* No welcome header */
     .greeting-container{display:none;}
 
     .question-container{
-      position:absolute;
-      left:50%; transform:translateX(-50%);
-      /* base was bottom:160px — raise by var */
+      position:absolute; left:50%; transform:translateX(-50%);
       bottom: calc(160px + var(--ui-raise));
       width:85%; text-align:center;
       opacity:0; transition:opacity .35s ease, transform .35s ease;
       pointer-events:auto;
     }
     .question-container.active{opacity:1; transform:translateX(-50%)}
-
     .question-text{color:var(--text); font-size:42px; font-weight:300; margin-bottom:36px; letter-spacing:.2px}
 
     .options{display:flex; gap:24px; justify-content:center}
 
     .btn{
-      pointer-events:auto;
-      border-radius:999px;
-      padding:18px 36px;
+      pointer-events:auto; border-radius:999px; padding:18px 36px;
       font-size:22px; font-weight:500; letter-spacing:.2px;
       transition:transform .15s ease, box-shadow .2s ease, background .2s ease, color .2s ease, border-color .2s ease;
-      border:1.5px solid transparent;
-      box-shadow:0 2px 10px rgba(17,24,39,0.06);
-      will-change:transform;
+      border:1.5px solid transparent; box-shadow:0 2px 10px rgba(17,24,39,0.06); will-change:transform;
     }
     .btn:active{transform:translateY(1px)}
-
     .btn-primary{background:var(--sf-blue); color:#fff; border-color:var(--sf-blue)}
     .btn-primary:hover{background:var(--sf-blue-2); border-color:var(--sf-blue-2); box-shadow:0 8px 24px rgba(59,130,246,.28)}
     .btn-primary:focus-visible{outline:4px solid var(--ring)}
-
     .btn-secondary{background:#fff; color:var(--text); border-color:#e6e9ef}
     .btn-secondary:hover{border-color:#cfd6e3; box-shadow:0 8px 24px rgba(17,24,39,.08); background:#f9fafb}
     .btn-secondary:focus-visible{outline:4px solid var(--ring)}
 
     .message-display{
-      position:absolute;
-      left:50%; transform:translateX(-50%) scale(.98);
-      /* base was bottom:100px — raise by var */
+      position:absolute; left:50%; transform:translateX(-50%) scale(.98);
       bottom: calc(100px + var(--ui-raise));
-      background:#ffffffcc;
-      border:1px solid #e8eef6; border-radius:16px;
+      background:#ffffffcc; border:1px solid #e8eef6; border-radius:16px;
       padding:28px 36px; width:80%; max-width:720px; text-align:center;
       backdrop-filter:blur(12px);
       opacity:0; transition:opacity .3s ease, transform .3s ease;
@@ -102,8 +91,10 @@
   <video
     id="bgVideo"
     class="bg-video"
-    src="video.webm"   <!-- set your path -->
+    src="/static/video/video.webm"   <!-- put the file at frontend/video/video.webm -->
     muted
+    autoplay
+    preload="auto"
     playsinline
   ></video>
 
@@ -207,7 +198,10 @@
     }
 
     /* ---------- WebSocket ---------- */
-    const BACKEND_WS_URL = "ws://localhost:8000/ws"; // change if remote
+    // Build WS URL dynamically so it works on localhost or over the network
+    const BACKEND_WS_URL =
+      (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
+
     function initWS(){
       try{
         ws = new WebSocket(BACKEND_WS_URL);
@@ -236,7 +230,12 @@
 
     resetToWelcome();
     initWS();
-    bgVideo && bgVideo.play().catch(()=>{});
+
+    // Autoplay fallback: if initial play() was blocked, try when ready
+    function tryPlay() { bgVideo && bgVideo.play().catch(()=>{}); }
+    bgVideo && bgVideo.addEventListener('canplay', tryPlay, { once:true });
+    bgVideo && bgVideo.addEventListener('loadeddata', tryPlay, { once:true });
+    document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) tryPlay(); }, false);
   </script>
 </body>
 </html>
